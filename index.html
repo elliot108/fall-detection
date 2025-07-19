@@ -212,6 +212,18 @@
         updateStatusDisplay(isFallDetected);
         drawPose(pose);
     }
+    // Draw the pose on the canvas
+    function drawPose(pose) {
+        if (webcam.canvas) {
+            ctx.drawImage(webcam.canvas, 0, 0);
+            // draw the keypoints and skeleton
+            if (pose) {
+                const minPartConfidence = 0.5;
+                tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
+                tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
+            }
+        }
+    }
 
     // Add these new helper functions
     function checkAbnormalPose(keypoints) {
