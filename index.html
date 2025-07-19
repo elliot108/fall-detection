@@ -10,22 +10,24 @@
   <div id="webcam-container"></div>
 
   <script type="text/javascript">
-    const URL = "my-pose-model/";
+    const URL = "/my-pose-model/";
     let model, webcam;
 
     async function init() {
-      const modelURL = URL + "model.json";
-      const metadataURL = URL + "metadata.json";
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
+  
+    model = await tmPose.load(modelURL, metadataURL);
+    const flip = true;
+    webcam = new tmPose.Webcam(400, 300, flip);
+  
+    await webcam.setup(); // ✅ Important!
+    await webcam.play();  // ✅ Starts the webcam feed
+  
+    document.getElementById("webcam-container").appendChild(webcam.canvas); // ✅ Display canvas
+    window.requestAnimationFrame(loop);
+  }
 
-      model = await tmPose.load(modelURL, metadataURL);
-      const flip = true;
-      webcam = new tmPose.Webcam(400, 300, flip);
-      await webcam.setup();
-      await webcam.play();
-
-      document.getElementById("webcam-container").appendChild(webcam.canvas);
-      window.requestAnimationFrame(loop);
-    }
 
     async function loop() {
       webcam.update();
