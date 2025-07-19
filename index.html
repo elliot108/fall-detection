@@ -85,17 +85,26 @@
             }
         }
 
-        // Fall detection logic
+        // Fall detection logic with debug logs
         if (isFalling) {
             if (!fallStartTime) {
                 fallStartTime = Date.now();
-            } else if (!fallAlerted && Date.now() - fallStartTime >= FALL_DURATION) {
-                fallAlerted = true;
-                playAlertSound();
-                console.log("Fall detected for 3 seconds! Sending alert!");
-                alert("Fall detected for 3 seconds! Sending alert!");
+                console.log("Fall started at:", fallStartTime);
+            } else {
+                const fallDuration = Date.now() - fallStartTime;
+                console.log("Current fall duration:", fallDuration, "ms");
+                
+                if (!fallAlerted && fallDuration >= FALL_DURATION) {
+                    fallAlerted = true;
+                    playAlertSound();
+                    console.log("Fall detected for 3 seconds! Sending alert!");
+                    alert("Fall detected for 3 seconds! Sending alert!");
+                }
             }
         } else {
+            if (fallStartTime) {
+                console.log("Fall detection reset");
+            }
             fallStartTime = null;
             fallAlerted = false;
         }
