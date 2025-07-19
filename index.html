@@ -21,11 +21,12 @@
 
     let fallStartTime = null;
     let fallAlerted = false;
-    const FALL_CLASS_NAME = "falling"; // Change if your class is named differently
-    const FALL_WINDOW_SIZE = 10; // Number of frames to consider
-    const MIN_FALL_FRAMES = 7; // Minimum frames that must detect falling
-    const FALL_THRESHOLD = 0.8; // Lower initial threshold for better sensitivity
-    
+    // Update these constants at the top of your script
+    const FALL_CLASS_NAME = "falling"; // Make sure this matches exactly with your model's class name
+    const FALL_WINDOW_SIZE = 5; // Reduced from 10 to make detection faster
+    const MIN_FALL_FRAMES = 3; // Reduced from 7 to make detection more sensitive
+    const FALL_THRESHOLD = 0.5; // Reduced from 0.8 to detect falls more easily
+
     const FALL_DURATION = 3000; // 3 seconds in milliseconds
     const fallDetectionWindow = []; // Array to store recent fall detections
 
@@ -70,11 +71,12 @@
         });
     }
 
+    // Replace the predict function
     async function predict() {
         const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
         const prediction = await model.predict(posenetOutput);
 
-        // Process fall detection
+        // Process fall detection with detailed logging
         let currentFallProbability = 0;
         for (let i = 0; i < maxPredictions; i++) {
             const classPrediction =
@@ -83,42 +85,44 @@
 
             if (prediction[i].className === FALL_CLASS_NAME) {
                 currentFallProbability = prediction[i].probability;
+                console.log(`Current fall probability: ${(currentFallProbability * 100).toFixed(1)}%`);
             }
         }
 
-        // Update sliding window
-        fallDetectionWindow.push(currentFallProbability > FALL_THRESHOLD);
+        // Update sliding window with logging
+        const isAboveThreshold = currentFallProbability > FALL_THRESHOLD;
+        console.log(`Above threshold (${FALL_THRESHOLD}): ${isAboveThreshold}`);
+        
+        fallDetectionWindow.push(isAboveThreshold);
         if (fallDetectionWindow.length > FALL_WINDOW_SIZE) {
-            fallDetectionWindow.shift(); // Remove oldest entry
+            fallDetectionWindow.shift();
         }
 
-        // Count how many frames in window detected falling
         const fallFramesCount = fallDetectionWindow.filter(Boolean).length;
-        
-        // Calculate fall confidence
         const fallConfidence = fallFramesCount / fallDetectionWindow.length;
         
-        console.log(`Fall confidence: ${(fallConfidence * 100).toFixed(1)}%, Frames: ${fallFramesCount}/${fallDetectionWindow.length}`);
+        console.log(`Window state: ${fallDetectionWindow.map(x => x ? '1' : '0').join('')}`);
+        console.log(`Fall frames: ${fallFramesCount}/${FALL_WINDOW_SIZE} (need ${MIN_FALL_FRAMES})`);
 
-        // Fall detection logic with improved reliability
+        // Enhanced fall detection logic
         if (fallFramesCount >= MIN_FALL_FRAMES) {
             if (!fallStartTime) {
                 fallStartTime = Date.now();
-                console.log("Potential fall detected, starting timer...");
+                console.log("🔴 Potential fall detected, starting timer...");
             } else {
                 const fallDuration = Date.now() - fallStartTime;
-                console.log(`Fall duration: ${fallDuration}ms, Confidence: ${(fallConfidence * 100).toFixed(1)}%`);
+                console.log(`⏰ Fall duration: ${fallDuration}ms / ${FALL_DURATION}ms`);
                 
                 if (!fallAlerted && fallDuration >= FALL_DURATION) {
                     fallAlerted = true;
                     playAlertSound();
-                    console.log(`Fall confirmed! Duration: ${fallDuration}ms, Confidence: ${(fallConfidence * 100).toFixed(1)}%`);
+                    console.log(`🚨 FALL CONFIRMED! Duration: ${fallDuration}ms`);
                     alert("Fall detected! Emergency alert triggered.");
                 }
             }
         } else {
             if (fallStartTime) {
-                console.log("Fall detection reset - insufficient confidence");
+                console.log("↪️ Fall detection reset - insufficient confidence");
                 fallStartTime = null;
                 fallAlerted = false;
             }
