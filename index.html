@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fall Detector</title>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+</head>
+<body>
+  <h1>Fall Detection</h1>
+  <div id="label">Loading...</div>
+  <div id="webcam-container"></div>
+
+  <script type="text/javascript">
+    const URL = "model/";
+    let model, webcam;
+
+    async function init() {
+      const modelURL = URL + "model.json";
+      const metadataURL = URL + "metadata.json";
+
+      model = await tmPose.load(modelURL, metadataURL);
+      const flip = true;
+      webcam = new tmPose.Webcam(400, 300, flip);
+      await webcam.setup();
+      await webcam.play();
+
+      document.getElementById("webcam-container").appendChild(webcam.canvas);
+      window.requestAnimationFrame(loop);
+    }
+
+    async function loop() {
+      webcam.update();
+      await predict();
+      window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+      const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+      const prediction = await model.predict(posenetOutput);
+
+      for (let i = 0; i < prediction.length; i++) {
+        const className = prediction[i].className;
+        const probability = prediction[i].probability;
+
+        if (className === "falling" && probability > 0.9) {
+          document.getElementById("label").innerText = "⚠️ Fall Detected!";
+          document.body.style.backgroundColor = "#ffcccc";
+        } else if (probability > 0.9) {
+          document.getElementById("label").innerText = className;
+          document.body.style.backgroundColor = "#ffffff";
+        }
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
