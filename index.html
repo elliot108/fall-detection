@@ -62,6 +62,8 @@
 
     let fallStartTime = null;
     let fallAlerted = false;
+    let isMonitoring = false; // Add this variable at the top with other state variables
+
     // Update these constants at the top of your script
     const FALL_CLASS_NAME = "Falling"; // Make sure this matches exactly with your model's class name
     const FALL_WINDOW_SIZE = 5; // Reduced from 10 to make detection faster
@@ -97,6 +99,7 @@
         await webcam.setup();
         await webcam.play();
         window.requestAnimationFrame(loop);
+        isMonitoring = true; // Set monitoring state to true
 
         const canvas = document.getElementById("canvas");
         canvas.width = size; canvas.height = size;
@@ -112,6 +115,8 @@
     }
 
     async function loop(timestamp) {
+        if (!isMonitoring) return; // Check monitoring state
+        
         webcam.update();
         await predict();
         window.requestAnimationFrame(loop);
@@ -161,8 +166,8 @@
                     fallAlerted = true;
                     playAlertSound();
                     console.log("🚨 Fall detected for 3 seconds!");
-                    alert("Fall detected! Emergency alert triggered.");
                     logAlert("Fall detected - Emergency alert triggered");
+                    // Removed the alert() call
                 }
             }
         } else {
@@ -234,10 +239,25 @@
     }
 
     function stopMonitoring() {
+        isMonitoring = false; // Update monitoring state
         webcam.stop();
+        
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Reset all states
+        fallStartTime = null;
+        fallAlerted = false;
+        
+        // Clear labels
+        if (labelContainer) {
+            labelContainer.innerHTML = '';
+        }
+
+        // Reset status display
+        const statusDisplay = document.getElementById('status-display');
+        statusDisplay.innerHTML = '<span style="color: #95a5a6;">Monitoring Inactive</span>';
 
         // Disable stop button
         const stopButton = document.getElementById("stopButton");
