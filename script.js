@@ -1,4 +1,4 @@
-const URL = "./my-pose-model/"; // make sure your folder is named exactly "my-pose-model"
+const URL = "./my-pose-model/";
 let model, webcam, ctx, labelContainer, maxPredictions;
 
 let fallStartTime = null;
@@ -7,11 +7,8 @@ let isMonitoring = false;
 
 // Constants for fall detection
 const FALL_CLASS_NAME = "Falling";
-const FALL_WINDOW_SIZE = 5;
-const MIN_FALL_FRAMES = 3;
-const FALL_THRESHOLD = 0.5;
-const FALL_DURATION = 3000;
-const fallDetectionWindow = [];
+const FALL_THRESHOLD = 0.7;  // 70% confidence threshold
+const FALL_DURATION = 3000;  // 3 seconds
 
 // Constants for pose detection
 const POSE_KEYPOINTS = {
@@ -28,47 +25,173 @@ const VERTICAL_WINDOW_SIZE = 5;
 
 // Main functions
 async function init() {
-    // ...existing init code...
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
+
+    model = await tmPose.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
+
+    // Calculate size based on container
+    const container = document.querySelector('.canvas-container');
+    const size = Math.min(container.offsetWidth, container.offsetHeight);
+    const flip = true;
+    
+    webcam = new tmPose.Webcam(size, size, flip);
+    await webcam.setup();
+    await webcam.play();
+
+    // Set canvas size
+    const canvas = document.getElementById("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    ctx = canvas.getContext("2d");
+
+    // Initialize labels
+    labelContainer = document.getElementById("label-container");
+    labelContainer.innerHTML = '';
+    for (let i = 0; i < maxPredictions; i++) {
+        labelContainer.appendChild(document.createElement("div"));
+    }
+
+    // Start monitoring
+    isMonitoring = true;
+    window.requestAnimationFrame(loop);
+
+    // Enable stop button
+    const stopButton = document.getElementById("stopButton");
+    stopButton.classList.remove("button-disabled");
+    
+    // Update status
+    updateStatusDisplay(false);
+    logAlert("Monitoring started");
 }
 
 async function loop(timestamp) {
-    // ...existing loop code...
+    if (!isMonitoring) return;
+    
+    webcam.update();
+    await predict();
+    window.requestAnimationFrame(loop);
 }
 
 async function predict() {
-    // ...existing predict code...
+    const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+    const prediction = await model.predict(posenetOutput);
+
+    // Process predictions for fall class
+    let currentFallProbability = 0;
+    for (let i = 0; i < maxPredictions; i++) {
+        const classPrediction =
+            prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+        labelContainer.childNodes[i].innerHTML = classPrediction;
+
+        if (prediction[i].className === FALL_CLASS_NAME) {
+            currentFallProbability = prediction[i].probability;
+            console.log(`Current fall probability: ${(currentFallProbability * 100).toFixed(1)}%`);
+        }
+    }
+
+    // Simplified fall detection logic
+    const isFalling = currentFallProbability > FALL_THRESHOLD;
+
+    if (isFalling) {
+        if (!fallStartTime) {
+            fallStartTime = Date.now();
+            console.log("🔴 Potential fall detected, starting timer...");
+        } else {
+            const fallDuration = Date.now() - fallStartTime;
+            
+            if (!fallAlerted && fallDuration >= FALL_DURATION) {
+                fallAlerted = true;
+                playAlertSound();
+                console.log("🚨 Fall detected for 3 seconds!");
+                logAlert("Fall detected - Emergency alert triggered");
+            }
+        }
+    } else {
+        if (fallStartTime) {
+            console.log("Fall detection reset");
+            fallStartTime = null;
+            fallAlerted = false;
+        }
+    }
+
+    updateStatusDisplay(isFalling);
+    drawPose(pose);
 }
 
-// Helper functions
 function drawPose(pose) {
-    // ...existing drawPose code...
+    if (webcam.canvas) {
+        ctx.drawImage(webcam.canvas, 0, 0);
+        if (pose) {
+            const minPartConfidence = 0.5;
+            tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
+            tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
+        }
+    }
 }
 
-function checkAbnormalPose(keypoints) {
-    // ...existing checkAbnormalPose code...
-}
-
-function updateStatusDisplay(isFallDetected) {
-    // ...existing updateStatusDisplay code...
-}
-
-function triggerEmergency() {
-    // ...existing triggerEmergency code...
+function updateStatusDisplay(isFalling) {
+    const statusDisplay = document.getElementById('status-display');
+    if (isFalling) {
+        statusDisplay.innerHTML = '<span style="color: #e74c3c;">⚠️ Fall Risk Detected</span>';
+    } else {
+        statusDisplay.innerHTML = '<span style="color: #2ecc71;">Normal</span>';
+    }
 }
 
 function logAlert(message) {
-    // ...existing logAlert code...
+    const alertLog = document.getElementById('alert-log');
+    const timestamp = new Date().toLocaleTimeString();
+    const alertElement = document.createElement('div');
+    alertElement.className = 'alert-item';
+    alertElement.innerHTML = `<strong>${timestamp}</strong>: ${message}`;
+    alertLog.insertBefore(alertElement, alertLog.firstChild);
 }
 
 function playAlertSound() {
-    // ...existing playAlertSound code...
+    const alertSound = document.getElementById('alertSound');
+    alertSound.currentTime = 0;
+    alertSound.play().catch(function(error) {
+        console.log("Audio play failed:", error);
+    });
 }
 
 function stopMonitoring() {
-    // ...existing stopMonitoring code...
+    isMonitoring = false;
+    webcam.stop();
+    
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Reset all states
+    fallStartTime = null;
+    fallAlerted = false;
+    
+    // Clear labels
+    if (labelContainer) {
+        labelContainer.innerHTML = '';
+    }
+
+    // Reset status display
+    const statusDisplay = document.getElementById('status-display');
+    statusDisplay.innerHTML = '<span style="color: #95a5a6;">Monitoring Inactive</span>';
+
+    // Disable stop button
+    const stopButton = document.getElementById("stopButton");
+    stopButton.classList.add("button-disabled");
+    
+    logAlert("Monitoring stopped");
 }
 
 // Event listeners
 window.addEventListener('resize', () => {
-    // ...existing resize handler code...
+    if (isMonitoring && webcam) {
+        const container = document.querySelector('.canvas-container');
+        const size = Math.min(container.offsetWidth, container.offsetHeight);
+        const canvas = document.getElementById("canvas");
+        canvas.width = size;
+        canvas.height = size;
+    }
 });
