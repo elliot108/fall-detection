@@ -1,21 +1,159 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Teachable Machine Pose Model</title>
+    <title>Elderly Health Monitoring System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .monitoring-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .status-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .emergency-button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .emergency-button:hover {
+            background-color: #c0392b;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .status-active {
+            background-color: #2ecc71;
+        }
+
+        .status-alert {
+            background-color: #e74c3c;
+        }
+
+        .alert-history {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        #canvas {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 8px;
+        }
+
+        #label-container {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
-  <div>Teachable Machine Pose Model</div>
-  <button type="button" onclick="init()">Start</button>
-  <div><canvas id="canvas"></canvas></div>
-  <div id="label-container"></div>
-  <audio id="alertSound" src="./alarm.mp3" preload="auto"></audio>
+    <div class="header">
+        <h1>Elderly Health Monitoring System</h1>
+        <button class="emergency-button" onclick="triggerEmergency()">EMERGENCY</button>
+    </div>
 
-  <!-- TensorFlow.js and Teachable Machine Pose library -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+    <div class="container">
+        <div class="monitoring-section">
+            <h2>Live Monitoring</h2>
+            <div class="status-indicator">
+                <div class="status-dot status-active"></div>
+                <span>Monitoring Active</span>
+            </div>
+            <div><canvas id="canvas"></canvas></div>
+            <div id="label-container"></div>
+            <button type="button" onclick="init()" class="start-button">Start Monitoring</button>
+        </div>
 
-  <!-- Your custom script should go here -->
-  <script type="text/javascript">
+        <div class="status-panel">
+            <h2>Status & Alerts</h2>
+            <div class="current-status">
+                <h3>Current Status</h3>
+                <div id="status-display">Normal</div>
+            </div>
+            
+            <div class="alert-history">
+                <h3>Recent Events</h3>
+                <div id="alert-log">
+                    <!-- Alert history will be populated here -->
+                </div>
+            </div>
+
+            <div class="emergency-contacts">
+                <h3>Emergency Contacts</h3>
+                <ul id="contact-list">
+                    <li>Primary Caregiver: (555) 0123</li>
+                    <li>Family Contact: (555) 0124</li>
+                    <li>Emergency Services: 911</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <audio id="alertSound" src="./alarm.mp3" preload="auto"></audio>
+
+    <!-- TensorFlow.js and Teachable Machine Pose library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+
+    <script type="text/javascript">
     const URL = "./my-pose-model/"; // make sure your folder is named exactly "my-pose-model"
     let model, webcam, ctx, labelContainer, maxPredictions;
 
@@ -128,6 +266,17 @@
             }
         }
 
+        // Update status display
+        const statusDisplay = document.getElementById('status-display');
+        if (fallFramesCount >= MIN_FALL_FRAMES) {
+            statusDisplay.innerHTML = '<span style="color: #e74c3c;">⚠️ Fall Risk Detected</span>';
+            if (!fallAlerted && fallDuration >= FALL_DURATION) {
+                logAlert("Fall detected - Emergency alert triggered");
+            }
+        } else {
+            statusDisplay.innerHTML = '<span style="color: #2ecc71;">Normal</span>';
+        }
+
         drawPose(pose);
     }
 
@@ -141,6 +290,23 @@
             }
         }
     }
-  </script>
+
+    // Add new function for emergency button
+    function triggerEmergency() {
+        playAlertSound();
+        alert("Emergency services are being contacted!");
+        logAlert("Emergency button pressed - Manual alert triggered");
+    }
+
+    // Add function to log alerts
+    function logAlert(message) {
+        const alertLog = document.getElementById('alert-log');
+        const timestamp = new Date().toLocaleTimeString();
+        const alertElement = document.createElement('div');
+        alertElement.className = 'alert-item';
+        alertElement.innerHTML = `<strong>${timestamp}</strong>: ${message}`;
+        alertLog.insertBefore(alertElement, alertLog.firstChild);
+    }
+    </script>
 </body>
 </html>
