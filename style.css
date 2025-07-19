@@ -1,0 +1,137 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    background-color: #2c3e50;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.monitoring-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.status-panel {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.emergency-button {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 25px;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.emergency-button:hover {
+    background-color: #c0392b;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.status-active {
+    background-color: #2ecc71;
+}
+
+.status-alert {
+    background-color: #e74c3c;
+}
+
+.alert-history {
+    margin-top: 20px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.alert-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+#canvas {
+    width: 100%;
+    max-width: 600px;
+    border-radius: 8px;
+}
+
+#label-container {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.start-button, .stop-button {
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-size: 1em;
+    cursor: pointer;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.start-button {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.start-button:hover {
+    background-color: #27ae60;
+}
+
+.stop-button {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.stop-button:hover {
+    background-color: #7f8c8d;
+}
+
+.button-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

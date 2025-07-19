@@ -2,107 +2,7 @@
 <html>
 <head>
     <title>Elderly Health Monitoring System</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-
-        .container {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .header {
-            background-color: #2c3e50;
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .monitoring-section {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .status-panel {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .emergency-button {
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 25px;
-            font-size: 1.2em;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        .emergency-button:hover {
-            background-color: #c0392b;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-
-        .status-active {
-            background-color: #2ecc71;
-        }
-
-        .status-alert {
-            background-color: #e74c3c;
-        }
-
-        .alert-history {
-            margin-top: 20px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .alert-item {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-        }
-
-        #canvas {
-            width: 100%;
-            max-width: 600px;
-            border-radius: 8px;
-        }
-
-        #label-container {
-            margin-top: 10px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 4px;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="header">
@@ -119,7 +19,10 @@
             </div>
             <div><canvas id="canvas"></canvas></div>
             <div id="label-container"></div>
-            <button type="button" onclick="init()" class="start-button">Start Monitoring</button>
+            <div class="control-buttons">
+                <button type="button" onclick="init()" class="start-button">Start Monitoring</button>
+                <button type="button" onclick="stopMonitoring()" class="stop-button button-disabled" id="stopButton">Stop Monitoring</button>
+            </div>
         </div>
 
         <div class="status-panel">
@@ -189,6 +92,10 @@
         for (let i = 0; i < maxPredictions; i++) {
             labelContainer.appendChild(document.createElement("div"));
         }
+
+        // Enable stop button
+        const stopButton = document.getElementById("stopButton");
+        stopButton.classList.remove("button-disabled");
     }
 
     async function loop(timestamp) {
@@ -306,6 +213,17 @@
         alertElement.className = 'alert-item';
         alertElement.innerHTML = `<strong>${timestamp}</strong>: ${message}`;
         alertLog.insertBefore(alertElement, alertLog.firstChild);
+    }
+
+    function stopMonitoring() {
+        webcam.stop();
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Disable stop button
+        const stopButton = document.getElementById("stopButton");
+        stopButton.classList.add("button-disabled");
     }
     </script>
 </body>
