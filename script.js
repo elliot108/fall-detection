@@ -8,7 +8,7 @@ let isMonitoring = false;
 // Constants for fall detection
 const FALL_CLASS_NAME = "Falling";
 const FALL_THRESHOLD = 0.7;  // 70% confidence threshold
-const FALL_DURATION = 3000;  // 3 seconds
+const FALL_DURATION = 3000;  // 3 seconds in milliseconds
 
 // Constants for pose detection
 const POSE_KEYPOINTS = {
@@ -74,6 +74,7 @@ async function loop(timestamp) {
     window.requestAnimationFrame(loop);
 }
 
+// Replace the existing predict function
 async function predict() {
     const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
     const prediction = await model.predict(posenetOutput);
@@ -87,32 +88,32 @@ async function predict() {
 
         if (prediction[i].className === FALL_CLASS_NAME) {
             currentFallProbability = prediction[i].probability;
-            console.log(`Current fall probability: ${(currentFallProbability * 100).toFixed(1)}%`);
+            console.log(`Fall probability: ${(currentFallProbability * 100).toFixed(1)}%`);
         }
     }
 
-    // Simplified fall detection logic
+    // Simple fall detection logic based on threshold
     const isFalling = currentFallProbability > FALL_THRESHOLD;
 
     if (isFalling) {
         if (!fallStartTime) {
             fallStartTime = Date.now();
-            console.log("🔴 Potential fall detected, starting timer...");
+            console.log("Starting fall timer");
         } else {
             const fallDuration = Date.now() - fallStartTime;
+            console.log(`Fall duration: ${fallDuration}ms`);
             
             if (!fallAlerted && fallDuration >= FALL_DURATION) {
                 fallAlerted = true;
                 playAlertSound();
-                console.log("🚨 Fall detected for 3 seconds!");
                 logAlert("Fall detected - Emergency alert triggered");
             }
         }
     } else {
         if (fallStartTime) {
-            console.log("Fall detection reset");
             fallStartTime = null;
             fallAlerted = false;
+            console.log("Fall detection reset");
         }
     }
 
@@ -183,6 +184,31 @@ function stopMonitoring() {
     stopButton.classList.add("button-disabled");
     
     logAlert("Monitoring stopped");
+}
+
+// New emergency function
+function triggerEmergency() {
+    // Play alert sound immediately
+    playAlertSound();
+    
+    // Log the manual emergency trigger
+    logAlert("⚠️ EMERGENCY - Manual trigger activated");
+    
+    // Update status display to show emergency
+    const statusDisplay = document.getElementById('status-display');
+    statusDisplay.innerHTML = '<span style="color: #e74c3c; font-weight: bold;">⚠️ EMERGENCY TRIGGERED</span>';
+    
+    // Optional: Add visual feedback to the emergency button
+    const emergencyButton = document.querySelector('.emergency-button');
+    emergencyButton.style.backgroundColor = '#c0392b';
+    
+    // Reset button style after 2 seconds
+    setTimeout(() => {
+        emergencyButton.style.backgroundColor = '';
+    }, 2000);
+    
+    // Optional: You could add more emergency actions here
+    // For example: Send notifications, call emergency services, etc.
 }
 
 // Event listeners
