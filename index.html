@@ -1,59 +1,75 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Fall Detector</title>
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+  <title>Teachable Machine Pose Model</title>
 </head>
 <body>
-  <h1>Fall Detection</h1>
-  <div id="label">Loading...</div>
-  <div id="webcam-container"></div>
+  <div>Teachable Machine Pose Model</div>
+  <button type="button" onclick="init()">Start</button>
+  <div><canvas id="canvas"></canvas></div>
+  <div id="label-container"></div>
 
+  <!-- TensorFlow.js and Teachable Machine Pose library -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+
+  <!-- Your custom script should go here -->
   <script type="text/javascript">
-    const URL = "./my-pose-model/";
-    let model, webcam;
+    const URL = "./my-pose-model/"; // make sure your folder is named exactly "my-pose-model"
+    let model, webcam, ctx, labelContainer, maxPredictions;
 
     async function init() {
-    const modelURL = URL + "model.json";
-    const metadataURL = URL + "metadata.json";
-  
-    model = await tmPose.load(modelURL, metadataURL);
-    const flip = true;
-    webcam = new tmPose.Webcam(400, 300, flip);
-  
-    await webcam.setup(); // ✅ Important!
-    await webcam.play();  // ✅ Starts the webcam feed
-  
-    document.getElementById("webcam-container").appendChild(webcam.canvas); // ✅ Display canvas
-    window.requestAnimationFrame(loop);
-  }
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
 
+        model = await tmPose.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
 
-    async function loop() {
-      webcam.update();
-      await predict();
-      window.requestAnimationFrame(loop);
+        const size = 200;
+        const flip = true;
+        webcam = new tmPose.Webcam(size, size, flip);
+        await webcam.setup();
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        const canvas = document.getElementById("canvas");
+        canvas.width = size; canvas.height = size;
+        ctx = canvas.getContext("2d");
+        labelContainer = document.getElementById("label-container");
+        for (let i = 0; i < maxPredictions; i++) {
+            labelContainer.appendChild(document.createElement("div"));
+        }
+    }
+
+    async function loop(timestamp) {
+        webcam.update();
+        await predict();
+        window.requestAnimationFrame(loop);
     }
 
     async function predict() {
-      const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
-      const prediction = await model.predict(posenetOutput);
+        const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+        const prediction = await model.predict(posenetOutput);
 
-      for (let i = 0; i < prediction.length; i++) {
-        const className = prediction[i].className;
-        const probability = prediction[i].probability;
-
-        if (className === "falling" && probability > 0.9) {
-          document.getElementById("label").innerText = "⚠️ Fall Detected!";
-          document.body.style.backgroundColor = "#ffcccc";
-        } else if (probability > 0.9) {
-          document.getElementById("label").innerText = className;
-          document.body.style.backgroundColor = "#ffffff";
+        for (let i = 0; i < maxPredictions; i++) {
+            const classPrediction =
+                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+            labelContainer.childNodes[i].innerHTML = classPrediction;
         }
-      }
+
+        drawPose(pose);
     }
 
-    init();
+    function drawPose(pose) {
+        if (webcam.canvas) {
+            ctx.drawImage(webcam.canvas, 0, 0);
+            if (pose) {
+                const minPartConfidence = 0.5;
+                tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
+                tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
+            }
+        }
+    }
   </script>
 </body>
 </html>
