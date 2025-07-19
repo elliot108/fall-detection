@@ -143,73 +143,38 @@
 
             if (prediction[i].className === FALL_CLASS_NAME) {
                 currentFallProbability = prediction[i].probability;
+                console.log(`Current fall probability: ${(currentFallProbability * 100).toFixed(1)}%`);
             }
         }
 
-        // Enhanced fall detection using multiple factors
-        let isFallDetected = false;
-        if (pose && pose.keypoints) {
-            const nose = pose.keypoints[POSE_KEYPOINTS.NOSE];
-            const hip = pose.keypoints[POSE_KEYPOINTS.HIP];
-            
-            if (nose.score > MIN_POSE_CONFIDENCE && hip.score > MIN_POSE_CONFIDENCE) {
-                const currentHeight = Math.abs(nose.position.y - hip.position.y);
-                
-                if (lastHeadPosition !== null) {
-                    const verticalChange = (lastHeadPosition - nose.position.y) / webcam.canvas.height;
-                    verticalChangeWindow.push(Math.abs(verticalChange));
-                    
-                    if (verticalChangeWindow.length > VERTICAL_WINDOW_SIZE) {
-                        verticalChangeWindow.shift();
-                    }
-                    
-                    // Calculate average vertical change
-                    const avgVerticalChange = verticalChangeWindow.reduce((a, b) => a + b, 0) / verticalChangeWindow.length;
-                    console.log(`Vertical change: ${(avgVerticalChange * 100).toFixed(1)}%`);
+        // Simplified fall detection logic
+        const isFalling = currentFallProbability > 0.7; // 70% threshold
 
-                    // 2. Combine multiple factors for fall detection
-                    const isRapidVerticalMovement = avgVerticalChange > VERTICAL_THRESHOLD;
-                    const isPoseConfident = currentFallProbability > FALL_THRESHOLD;
-                    const isAbnormalPose = checkAbnormalPose(pose.keypoints);
-
-                    isFallDetected = (isRapidVerticalMovement && isPoseConfident) || 
-                                   (isPoseConfident && isAbnormalPose);
-
-                    if (isFallDetected) {
-                        console.log(`🔴 Fall indicators: Vertical:${isRapidVerticalMovement}, Confidence:${isPoseConfident}, Abnormal:${isAbnormalPose}`);
-                    }
-                }
-                lastHeadPosition = nose.position.y;
-            }
-        }
-
-        // Fall alert logic
-        if (isFallDetected) {
+        if (isFalling) {
             if (!fallStartTime) {
                 fallStartTime = Date.now();
                 console.log("🔴 Potential fall detected, starting timer...");
             } else {
                 const fallDuration = Date.now() - fallStartTime;
-                console.log(`⏰ Fall duration: ${fallDuration}ms / ${FALL_DURATION}ms`);
                 
                 if (!fallAlerted && fallDuration >= FALL_DURATION) {
                     fallAlerted = true;
                     playAlertSound();
-                    console.log(`🚨 FALL CONFIRMED!`);
+                    console.log("🚨 Fall detected for 3 seconds!");
                     alert("Fall detected! Emergency alert triggered.");
                     logAlert("Fall detected - Emergency alert triggered");
                 }
             }
         } else {
             if (fallStartTime) {
-                console.log("↪️ Fall detection reset");
+                console.log("Fall detection reset");
                 fallStartTime = null;
                 fallAlerted = false;
             }
         }
 
         // Update status display
-        updateStatusDisplay(isFallDetected);
+        updateStatusDisplay(isFalling);
         drawPose(pose);
     }
     // Draw the pose on the canvas
