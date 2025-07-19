@@ -18,6 +18,12 @@
     const URL = "./my-pose-model/"; // make sure your folder is named exactly "my-pose-model"
     let model, webcam, ctx, labelContainer, maxPredictions;
 
+    let fallStartTime = null;
+    let fallAlerted = false;
+    const FALL_CLASS_NAME = "falling"; // Change if your class is named differently
+    const FALL_THRESHOLD = 0.8; // Probability threshold for "falling"
+    const FALL_DURATION = 3000; // 3 seconds in milliseconds
+
     async function init() {
         const modelURL = URL + "model.json";
         const metadataURL = URL + "metadata.json";
@@ -47,14 +53,41 @@
         window.requestAnimationFrame(loop);
     }
 
+    function playAlertSound() {
+        const audio = new Audio("https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg");
+        audio.play();
+    }
+
     async function predict() {
         const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
         const prediction = await model.predict(posenetOutput);
 
+        let isFalling = false;
         for (let i = 0; i < maxPredictions; i++) {
             const classPrediction =
                 prediction[i].className + ": " + prediction[i].probability.toFixed(2);
             labelContainer.childNodes[i].innerHTML = classPrediction;
+
+            if (
+                prediction[i].className === FALL_CLASS_NAME &&
+                prediction[i].probability > FALL_THRESHOLD
+            ) {
+                isFalling = true;
+            }
+        }
+
+        // Fall detection logic
+        if (isFalling) {
+            if (!fallStartTime) {
+                fallStartTime = Date.now();
+            } else if (!fallAlerted && Date.now() - fallStartTime >= FALL_DURATION) {
+                fallAlerted = true;
+                playAlertSound();
+                alert("Fall detected for 3 seconds! Sending alert!");
+            }
+        } else {
+            fallStartTime = null;
+            fallAlerted = false;
         }
 
         drawPose(pose);
