@@ -73,6 +73,7 @@
                 prediction[i].probability > FALL_THRESHOLD
             ) {
                 isFalling = true;
+                console.log("Falling detected with probability:", prediction[i].probability);
             }
         }
 
@@ -83,6 +84,7 @@
             } else if (!fallAlerted && Date.now() - fallStartTime >= FALL_DURATION) {
                 fallAlerted = true;
                 playAlertSound();
+                console.log("Fall detected for 3 seconds! Sending alert!");
                 alert("Fall detected for 3 seconds! Sending alert!");
             }
         } else {
