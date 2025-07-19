@@ -22,8 +22,12 @@
     let fallStartTime = null;
     let fallAlerted = false;
     const FALL_CLASS_NAME = "falling"; // Change if your class is named differently
-    const FALL_THRESHOLD = 0.8; // Probability threshold for "falling"
+    const FALL_WINDOW_SIZE = 10; // Number of frames to consider
+    const MIN_FALL_FRAMES = 7; // Minimum frames that must detect falling
+    const FALL_THRESHOLD = 0.8; // Lower initial threshold for better sensitivity
+    
     const FALL_DURATION = 3000; // 3 seconds in milliseconds
+    const fallDetectionWindow = []; // Array to store recent fall detections
 
     async function init() {
         const modelURL = URL + "model.json";
@@ -70,43 +74,54 @@
         const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
         const prediction = await model.predict(posenetOutput);
 
-        let isFalling = false;
+        // Process fall detection
+        let currentFallProbability = 0;
         for (let i = 0; i < maxPredictions; i++) {
             const classPrediction =
                 prediction[i].className + ": " + prediction[i].probability.toFixed(2);
             labelContainer.childNodes[i].innerHTML = classPrediction;
 
-            if (
-                prediction[i].className === FALL_CLASS_NAME &&
-                prediction[i].probability > FALL_THRESHOLD
-            ) {
-                isFalling = true;
-                console.log("Falling detected with probability:", prediction[i].probability);
+            if (prediction[i].className === FALL_CLASS_NAME) {
+                currentFallProbability = prediction[i].probability;
             }
         }
 
-        // Fall detection logic with debug logs
-        if (isFalling) {
+        // Update sliding window
+        fallDetectionWindow.push(currentFallProbability > FALL_THRESHOLD);
+        if (fallDetectionWindow.length > FALL_WINDOW_SIZE) {
+            fallDetectionWindow.shift(); // Remove oldest entry
+        }
+
+        // Count how many frames in window detected falling
+        const fallFramesCount = fallDetectionWindow.filter(Boolean).length;
+        
+        // Calculate fall confidence
+        const fallConfidence = fallFramesCount / fallDetectionWindow.length;
+        
+        console.log(`Fall confidence: ${(fallConfidence * 100).toFixed(1)}%, Frames: ${fallFramesCount}/${fallDetectionWindow.length}`);
+
+        // Fall detection logic with improved reliability
+        if (fallFramesCount >= MIN_FALL_FRAMES) {
             if (!fallStartTime) {
                 fallStartTime = Date.now();
-                console.log("Fall started at:", fallStartTime);
+                console.log("Potential fall detected, starting timer...");
             } else {
                 const fallDuration = Date.now() - fallStartTime;
-                console.log("Current fall duration:", fallDuration, "ms");
+                console.log(`Fall duration: ${fallDuration}ms, Confidence: ${(fallConfidence * 100).toFixed(1)}%`);
                 
                 if (!fallAlerted && fallDuration >= FALL_DURATION) {
                     fallAlerted = true;
                     playAlertSound();
-                    console.log("Fall detected for 3 seconds! Sending alert!");
-                    alert("Fall detected for 3 seconds! Sending alert!");
+                    console.log(`Fall confirmed! Duration: ${fallDuration}ms, Confidence: ${(fallConfidence * 100).toFixed(1)}%`);
+                    alert("Fall detected! Emergency alert triggered.");
                 }
             }
         } else {
             if (fallStartTime) {
-                console.log("Fall detection reset");
+                console.log("Fall detection reset - insufficient confidence");
+                fallStartTime = null;
+                fallAlerted = false;
             }
-            fallStartTime = null;
-            fallAlerted = false;
         }
 
         drawPose(pose);
